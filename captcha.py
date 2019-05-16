@@ -2,6 +2,9 @@
 # *.* coding=utf-8
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import pytesseract
+import os
+import requests
 
 
 def gene_line(img):
@@ -51,17 +54,16 @@ def generate_pic_with_text(text):
     with open("captcha.png", "wb") as f:
         img.save(f, format="png")
     # 显示图片
-
     draw = ImageDraw.Draw(img, mode="RGB")
     # 在(100,100)坐标上生成一个红点,指定的坐标不能超过图片的尺寸
     # draw.point([100, 100], fill="red")
     # 在(80,80)坐标上生成一个黑点,指定的坐标不能超过图片的尺寸
     draw.point([80, 80], fill=(0, 0, 0))
-    for i in range(0, 10000):
-        # 随机生成一万个点（噪点）
-        x = random.choice(range(0, 280))
-        y = random.choice(range(0, 140))
-        draw.point([x, y], fill=(0, 0, 0))
+    # for i in range(0, 10000):
+    #    # 随机生成一万个点（噪点）
+    #    x = random.choice(range(0, 280))
+    #    y = random.choice(range(0, 140))
+    #    draw.point([x, y], fill=(0, 0, 0))
     # 第一个括号里面的参数是坐标,前两个数为开始坐标,后两个数为结束坐标
     # 括号里的第二个参数指定颜色,可以直接指定,也可以用RGB来表示颜色
     draw.line((100, 100, 100, 300), fill="blue")
@@ -80,12 +82,28 @@ def generate_pic_with_text(text):
         "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf", size=100)
     draw.text([0, 0], text, "blue", myfont)
     gene_line('captcha.png')
-    img.save('captcha.jpg', dpi=(127.0, 127.0))
+    img.save('captcha.png', dpi=(127.0, 127.0))
     img.show()
     return 'captcha.png'
 
 
+def gen_captcha_from_url(num):
+    # https://login.anjuke.com/general/captcha?timestamp=15580192349965467 安居客
+
+    # if not os._exists('code_pic/'):
+    #    os.mkdir('code_pic/')
+    for i in range(0, num):
+        fake_timestamp = get_random_string(8, 8, 0, 0)
+        url = 'https://login.anjuke.com/general/captcha?timestamp='+fake_timestamp
+        response = requests.get(url)
+        filename = 'code_pic/'+str(i)+'.jpg'
+        with open(filename, 'wb')as f:
+            f.write(response.content)
+
+
 if __name__ == "__main__":
     text = get_random_string(4, 1, 2, 1)
-    img = generate_pic_with_text(text)
-    print(text)
+    #img = generate_pic_with_text(text)
+    # print(text)
+    # print(pytesseract.image_to_string('captcha.png'))
+    gen_captcha_from_url(100)
