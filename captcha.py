@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 # *.* coding=utf-8
+from PIL import Image
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import pytesseract
@@ -90,20 +91,75 @@ def generate_pic_with_text(text):
 def gen_captcha_from_url(num):
     # https://login.anjuke.com/general/captcha?timestamp=15580192349965467 安居客
 
-    # if not os._exists('code_pic/'):
-    #    os.mkdir('code_pic/')
+    if not os.path.exists('code_pic/'):
+        os.mkdir('code_pic/')
+    pic = []
     for i in range(0, num):
         fake_timestamp = get_random_string(8, 8, 0, 0)
-        url = 'https://login.anjuke.com/general/captcha?timestamp='+fake_timestamp
+        url = 'https://login.anjuke.com/general/captcha?timestamp=' + fake_timestamp
+        print(url)
         response = requests.get(url)
-        filename = 'code_pic/'+str(i)+'.jpg'
+        filename = 'code_pic/' + str(i) + '.jpg'
+        pic.append(filename)
         with open(filename, 'wb')as f:
             f.write(response.content)
+
+    return pic
+
+
+def two_value(pic):
+    img = Image.open(pic)
+    # 模式L”为灰色图像，它的每个像素用8个bit表示，0表示黑，255表示白，其他数字表示不同的灰度。
+    Img = img.convert('L')
+    Img.save(pic)
+
+    # 自定义灰度界限，大于这个值为黑色，小于这个值为白色
+    threshold = 200
+
+    table = []
+    for i in range(256):
+        if i < threshold:
+            table.append(0)
+        else:
+            table.append(1)
+
+    # 图片二值化
+    photo = Img.point(table, '1')
+    photo.save(pic)
+
+
+def check_right(folder):
+    pic_list = os.listdir(folder)
+    print(pic_list)
+    right = 0
+    all_pic = 0
+    for pic in pic_list:
+        if not '.tiff' in pic:
+            continue
+        all_pic += 1
+        real = pic[:4]
+        filename = 'code_pic/' + pic
+        im = Image.open(filename)
+        filename = filename.replace('.jpg', '.tiff')
+        im.save(filename)  # or 'test.tif'
+        result = pytesseract.image_to_string(
+            filename, lang='normal', config='--psm 7 --oem 3 -c tessedit_char_whitelist=qwertyuiopasdfghjklzxcvbnm')
+        print(filename + '=' + result, end='')
+
+        if real == result:
+            print('    yes', end='')
+            right += 1
+        print('\n')
+    print('成功率：{right}/{all}={last}'.format(right=right,
+                                            all=all_pic, last=float(right/all_pic)))
 
 
 if __name__ == "__main__":
     text = get_random_string(4, 1, 2, 1)
     #img = generate_pic_with_text(text)
-    # print(text)
-    # print(pytesseract.image_to_string('captcha.png'))
-    gen_captcha_from_url(100)
+    print(text)
+
+    #pic_list = gen_captcha_from_url(50)
+    # for pic in pic_list:
+    #    two_value(pic)
+    check_right('code_pic/')
