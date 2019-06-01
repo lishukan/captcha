@@ -78,18 +78,16 @@ class base_model(object):
         img.show()
         return 'captcha.png'
 
-    def gen_captcha_from_url(self, num):
+    def gen_captcha_from_url(url, num, folder):
         # https://login.anjuke.com/general/captcha?timestamp=15580192349965467 安居客
 
-        if not os.path.exists('code_pic/'):
-            os.mkdir('code_pic/')
+        if not os.path.exists(folder):
+            os.mkdir(folder)
         pic = []
         for i in range(0, num):
-            fake_timestamp = self.get_random_string(8, 8, 0, 0)
-            url = 'https://login.anjuke.com/general/captcha?timestamp=' + fake_timestamp
-            print(url)
+
             response = requests.get(url)
-            filename = 'code_pic/' + str(i) + '.jpg'
+            filename = folder+'/' + str(i) + '.jpg'
             pic.append(filename)
             with open(filename, 'wb')as f:
                 f.write(response.content)
