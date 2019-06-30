@@ -12,7 +12,7 @@ class base_model(object):
     def __init__(self):
         pass
 
-    def get_random_string(self, length, num_number=0, capital_letters_list=0, lower_letters_numbers=0):
+    def get_random_string(length, num_number=0, capital_letters_list=0, lower_letters_numbers=0):
         # param : 验证码长度，数字个数，大写字母个数，小写字母个数
         captcha_list = []
         # 参数合法
@@ -41,7 +41,7 @@ class base_model(object):
         random.shuffle(captcha_list)  # 这个函数返回值为None，但直接调用即可
         return ''.join(captcha_list)
 
-    def generate_pic_with_text(self, text):
+    def generate_pic_with_text(text):
         img = Image.new(mode="RGB", size=(280, 140), color=(255, 255, 255))
         with open("captcha.png", "wb") as f:
             img.save(f, format="png")
@@ -203,7 +203,7 @@ class base_model(object):
         show_0_1_distribute(picname)
         img.show()
 
-    def check_right(self, folder):
+    def check_right(folder):
         pic_list = os.listdir(folder)
         print(pic_list)
         right = 0
