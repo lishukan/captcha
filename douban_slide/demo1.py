@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 import random
+import traceback
 import time, re
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException,NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,6 +12,37 @@ from selenium.webdriver.common.action_chains import ActionChains
 from PIL import Image
 import requests
 from io import BytesIO
+import cv2 as cv
+import time
+
+def get_pos(image):
+    blurred = cv.GaussianBlur(image, (3, 3), 0)
+    canny = cv.Canny(blurred, 200, 400)
+    contours, hierarchy = cv.findContours(canny, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    for i, contour in enumerate(contours):
+        M = cv.moments(contour)
+        if M['m00'] == 0:
+            cx = cy = 0
+        else:
+            cx, cy = M['m10'] / M['m00'], M['m01'] / M['m00']
+        if 40 < cv.contourArea(contour)    :
+            #if cx < 400:
+            #    continue
+            x, y, w, h = cv.boundingRect(contour)  # 外接矩形
+            if 40 < w < 60 and 40 < h < 60:
+                print('找到了，横坐标为', x)
+            else:
+                continue
+            cv.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv.imshow('image', image)
+            print(cv.contourArea(contour),x)
+            time.sleep(2)
+            #return x
+    return 0
+
+
+
+
 def two_value(pic):
         new_pic='test'+pic
         img = Image.open(pic)
@@ -39,7 +71,7 @@ def two_value(pic):
 
 def show_0_1_distribute(picname):
     img = Image.open(picname)
-    img = img.convert('R')  # 返回一个Image对象
+    img = img.convert('L')  # 返回一个Image对象
 
     width, height = img.size
     print(img.size )
@@ -224,24 +256,48 @@ def get_page(url):
     ele.click()
     driver.find_element_by_id('username').send_keys('13755235326')
     driver.find_element_by_id('password').send_keys('13755235326')
+    time.sleep(2)
+    driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
+    
+    while True:
+        time.sleep(1)
+        try:
+            
+            frame = driver.find_element_by_xpath('//*[@id="TCaptcha"]/iframe')
+            driver.switch_to_frame(frame)
+            print('切换到frame')
+            ele = driver.find_element_by_xpath('//*[@id="tcaptcha_drag_button"]')
+            print('找到了 拖动框')
+            ActionChains(driver).move_to_element(ele)
+            ActionChains(driver).click_and_hold(on_element=ele).perform()
+            time.sleep(0.5)
+            distance=500
+            while distance > 0:
+                if distance > 10:
+                    # 如果距离大于10，就让他移动快一点
+                    span = random.randint(5, 8)
+                else:
+                    # 快到缺口了，就移动慢一点
+                    span = random.randint(2, 3)
+                ActionChains(driver).move_by_offset(span, 0).perform()
+                distance -= span
+                time.sleep(random.randint(10, 50) / 100)
 
-    try:
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-        driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
-    except:
-        pass
+            ActionChains(driver).move_by_offset(distance, 1).perform()
+            ActionChains(driver).release(on_element=ele).perform()
+        except NoSuchElementException:
+            print('error')
+            driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
+            pass
+        except:
+            traceback.print_exc()
+            driver.quit()
+            return 
+        
     
     time.sleep(5)
     #driver.switch_to_default_content()
-    ele = driver.find_element_by_xpath('//*[@id="TCaptcha"]/iframe')
-    driver.switch_to_frame(ele)
-    ele = driver.find_element_by_xpath('//*[@id="tcaptcha_drag_thumb"]')
-    ActionChains(driver).move_to_element(ele)
-    ActionChains(driver).click_and_hold(on_element=ele).perform()
+    
 
 
 
@@ -250,7 +306,7 @@ def get_page(url):
 
 if __name__ == "__main__":
     url='https://www.douban.com/'
-    #get_page(url)
+    get_page(url)
     pic='slide.jpeg'
     #two_value(pic)
     show_0_1_distribute(pic)
