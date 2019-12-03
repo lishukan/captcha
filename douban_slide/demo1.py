@@ -14,8 +14,9 @@ import requests
 from io import BytesIO
 import cv2 as cv
 import time
-
-def get_pos(image):
+from lxml import etree
+def get_pos(image_file):
+    image = cv.imread(image_file)
     blurred = cv.GaussianBlur(image, (3, 3), 0)
     canny = cv.Canny(blurred, 200, 400)
     contours, hierarchy = cv.findContours(canny, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
@@ -37,7 +38,7 @@ def get_pos(image):
             cv.imshow('image', image)
             print(cv.contourArea(contour),x)
             time.sleep(2)
-            #return x
+            return x
     return 0
 
 
@@ -234,8 +235,21 @@ def get_track(distance):
 
 
 
+url_head='https://captcha.guard.qcloud.com'
 
 
+def download(origin):
+    headers = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+        "Accept-Encoding":"gzip, deflate",
+        "Accept-Language":"en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+        "Connection":"keep-alive",
+        "User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36",
+    }
+    response = requests.get(origin, headers=headers, timeout=5)
+    with open('origin.jpg', 'wb') as f:
+        f.write(response.content)
+    return 'origin.jpg'
 
 def get_page(url):
     my_options=webdriver.FirefoxOptions()
@@ -256,7 +270,8 @@ def get_page(url):
     ele.click()
     driver.find_element_by_id('username').send_keys('13755235326')
     driver.find_element_by_id('password').send_keys('13755235326')
-    time.sleep(2)
+   
+    WebDriverWait(driver,3).until(EC.visibility_of_element_located((By.XPATH,'/html/body/div[1]/div[2]/div[1]/div[5]/a')))
     driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
     
     while True:
@@ -268,10 +283,19 @@ def get_page(url):
             print('切换到frame')
             ele = driver.find_element_by_xpath('//*[@id="tcaptcha_drag_button"]')
             print('找到了 拖动框')
+            source = driver.page_source
+            print(source)
+            content = etree.HTML(source)
+            origin = url_head + ''.join(content.xpath('//*[@id="capImg"]//@src'))
+            print(origin)
+            pic = download(origin)
+            offset = get_pos(pic)
+            img=Image.open(pic)
+            distance=offset/img.width*280
             ActionChains(driver).move_to_element(ele)
             ActionChains(driver).click_and_hold(on_element=ele).perform()
             time.sleep(0.5)
-            distance=500
+            
             while distance > 0:
                 if distance > 10:
                     # 如果距离大于10，就让他移动快一点
@@ -287,7 +311,7 @@ def get_page(url):
             ActionChains(driver).release(on_element=ele).perform()
         except NoSuchElementException:
             print('error')
-            driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[1]/div[5]/a').click()
+            
             pass
         except:
             traceback.print_exc()

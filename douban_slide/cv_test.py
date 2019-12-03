@@ -3,6 +3,7 @@ import cv2 as cv
 import time
 
 def get_pos(image):
+    img0 = cv.imread(image)
     blurred = cv.GaussianBlur(image, (3, 3), 0)
     canny = cv.Canny(blurred, 200, 400)
     contours, hierarchy = cv.findContours(canny, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
