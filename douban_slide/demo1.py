@@ -32,6 +32,7 @@ def get_pos(image_file):
             x, y, w, h = cv.boundingRect(contour)  # 外接矩形
             if 40 < w < 60 and 40 < h < 60:
                 print('找到了，横坐标为', x)
+                return 
             else:
                 continue
             cv.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
@@ -50,13 +51,13 @@ def two_value(pic):
         # 模式L”为灰色图像，它的每个像素用8个bit表示，0表示黑，255表示白，其他数字表示不同的灰度。
         width, height = img.size
         print(width,height)
-        img = img.resize((int(width/2), int(height/2)), Image.ANTIALIAS)
+        #img = img.resize((int(width/2), int(height/2)), Image.ANTIALIAS)
         Img = img.convert('L')
         # 模式  1   表示黑白图像，只有黑白
-
+        Img.show()
         Img.save(new_pic)
         # 自定义灰度界限，大于这个值为黑色，小于这个值为白色
-        threshold =50
+        threshold =100
 
         table = []
         for i in range(256):
@@ -329,8 +330,9 @@ def get_page(url):
 
 
 if __name__ == "__main__":
-    url='https://www.douban.com/'
-    get_page(url)
-    pic='slide.jpeg'
-    #two_value(pic)
+    #url='https://www.douban.com/'
+    #get_page(url)
+    pic='captcha_pic_1.jpeg'
+    two_value(pic)
     show_0_1_distribute(pic)
+    
