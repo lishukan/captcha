@@ -3,7 +3,7 @@
 #from gen_captcha import number
 #from gen_captcha import alphabet
 #from gen_captcha import ALPHABET
-
+import traceback
 import os
 import os.path
 import random
@@ -15,7 +15,7 @@ number = []
 alphabet = []
 
 # 百度企业信用给的验证码里没有0，o   1和l 这种难分辨的字母
-char_set = ['2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n',  'p', 'q', 'r', 's', 't', 'u',
+CHAR_SET = ['2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n',  'p', 'q', 'r', 's', 't', 'u',
             'v', 'w', 'x', 'y', 'z']
 """
 text, image = gen_captcha_text_and_image()
@@ -32,25 +32,40 @@ MAX_CAPTCHA = 4
 
 # 把彩色图像转为灰度图像（色彩对识别验证码没有什么用）
 
+PICS_DIR='xinbaidu_pic' #训练集
+PICS_LIST= os.listdir(PICS_DIR)
+print(PICS_LIST)
 
-def gen_captcha_text_and_image():
+
+def get_single_image_and_text(image_name):
+
+    image = Image.open(image_name)
+    image = image.resize(
+        (int(IMAGE_WIDTH), int(IMAGE_HEIGHT)), Image.ANTIALIAS)
+    # captcha_image.show()
+    image = np.array(image)
+
+    text = re.findall('(.*?)\.jpg', image_name)[0]
+    #pic = os.path.join(PICS_DIR,image_name)
+
+    # print(text)
+    #os.rename(pic,pic.replace(text,text.lower()))
+    text = text.lower()
+    
+    return text,image
+
+
+def choose_one_captcha_text_and_image(pics_dir=PICS_DIR):
     """    while True:
         text, image = gen_captcha_text_and_image()
         if image.shape == (60, 160, 3):
             return text, image
     """
-    pic_list = os.listdir('captcha/xinbaidu_pic')
-    pic = random.choice(pic_list)
+    pics_list= os.listdir(pics_dir)
+    pic = random.choice(pics_list)
     # print(pic)
-    text = re.findall('(.*?)\.jpg', pic)[0]
-    pic = 'captcha/xinbaidu_pic/'+pic
-    image = Image.open(pic)
-    image = image.resize(
-        (int(IMAGE_WIDTH), int(IMAGE_HEIGHT)), Image.ANTIALIAS)
-    # captcha_image.show()
-    image = np.array(image)
-    # print(text)
-    return text, image
+
+    return get_single_image_and_text(pic)
 
 
 def convert2gray(img):
@@ -71,7 +86,7 @@ np.pad(image,((2,3),(2,2)), 'constant', constant_values=(255,))  # 在图像上�
 
 # 文本转向量
 
-CHAR_SET_LEN = len(char_set)
+CHAR_SET_LEN = len(CHAR_SET)
 
 
 def text2vec(text):
@@ -82,12 +97,12 @@ def text2vec(text):
     vector = np.zeros(MAX_CAPTCHA * CHAR_SET_LEN)
 
     def char2pos(c):
-        for i in range(0, len(char_set)):
-            if char_set[i] == c:
+        for i in range(0, len(CHAR_SET)):
+            if CHAR_SET[i] == c:
                 return i
 
     for i, c in enumerate(text):
-        print(text)
+        print(text,i,c)
         idx = i * CHAR_SET_LEN + char2pos(c)
         # print i,CHAR_SET_LEN,char2pos(c),idx
         vector[idx] = 1
@@ -104,17 +119,17 @@ def vec2text(vec):
     for i, c in enumerate(char_pos):
         char_at_pos = i  # c/63
         char_idx = c % CHAR_SET_LEN
-        if char_idx < 10:
-            char_code = char_idx + ord('0')
-        elif char_idx < 36:
-            char_code = char_idx - 10 + ord('A')
-        elif char_idx < 62:
-            char_code = char_idx - 36 + ord('a')
-        elif char_idx == 62:
-            char_code = ord('_')
-        else:
-            raise ValueError('error')
-        text.append(chr(char_code))
+        # if char_idx < 10:
+        #     char_code = char_idx + ord('0')
+        # elif char_idx < 36:
+        #     char_code = char_idx - 10 + ord('A')
+        # elif char_idx < 62:
+        #     char_code = char_idx - 36 + ord('a')
+        # elif char_idx == 62:
+        #     char_code = ord('_')
+        # else:
+        #     raise ValueError('error')
+        text.append(CHAR_SET[char_idx])
     return "".join(text)
 
 
@@ -134,28 +149,10 @@ def get_next_batch(batch_size=128):
     batch_x = np.zeros([batch_size, IMAGE_HEIGHT * IMAGE_WIDTH])
     batch_y = np.zeros([batch_size, MAX_CAPTCHA * CHAR_SET_LEN])
 
-    # 有时生成图像大小不是(60, 160, 3)
-    def wrap_gen_captcha_text_and_image():
-        """    while True:
-            text, image = gen_captcha_text_and_image()
-            if image.shape == (60, 160, 3):
-                return text, image
-        """
-        pic_list = os.listdir('captcha/xinbaidu_pic')
-        pic = random.choice(pic_list)
-        # print(pic)
-        text = re.findall('(.*?)\.jpg', pic)[0]
-        pic = 'captcha/xinbaidu_pic/'+pic
-        image = Image.open(pic)
-        image = image.resize(
-            (int(IMAGE_WIDTH), int(IMAGE_HEIGHT)), Image.ANTIALIAS)
-        # captcha_image.show()
-        image = np.array(image)
-        print(text)
-        return text, image
+
 
     for i in range(batch_size):
-        text, image = wrap_gen_captcha_text_and_image()
+        text, image = choose_one_captcha_text_and_image()
         image = convert2gray(image)
 
         # (image.flatten()-128)/128  mean为0
@@ -260,8 +257,7 @@ def train_crack_captcha_cnn():
                 batch_x_test, batch_y_test = get_next_batch(100)
                 acc = sess.run(accuracy, feed_dict={
                                X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
-                print(
-                    '***************************************************************第%s次的准确率为%s%' % (step, acc*100))
+                print('***************************************************************第%s次的准确率为%s' % (step, acc*100))
                 # 如果准确率大于50%,保存模型,完成训练
                 if acc > 0.9:  # 我这里设了0.9，设得越大训练要花的时间越长，如果设得过于接近1，很难达到。如果使用cpu，花的时间很长，cpu占用很高电脑发烫。
                     # 使用saver对象保存此模型
@@ -273,39 +269,51 @@ def train_crack_captcha_cnn():
 
 
 if __name__ == "__main__":
-    train_crack_captcha_cnn()
-    """
+    #train_crack_captcha_cnn()
+    
     output = crack_captcha_cnn()
 
-    saver = tf.train.Saver()  # 创建saver对象
-    sess = tf.Session()  # 创建会话
-    # 在会话中恢复当前目录下最新保存的模型，
-    # restore(session,model_file)
-    saver.restore(sess, tf.train.latest_checkpoint('.'))
+ 
+    #W = tf.Variable(np.arange(6).reshape((2, 3)), dtype=tf.float32, name="weights")
+    #b = tf.Variable(np.arange(3).reshape((1, 3)), dtype=tf.float32, name="biases")
 
-    index = 0
-    ok = 0
 
-    while(index < 100):
-        index += 1
-        text, image = gen_captcha_text_and_image()
-        image = convert2gray(image)
-        image = image.flatten() / 255
+    with tf.Session() as sess:  # 创建会话
+        # 在会话中恢复当前目录下最新保存的模型，
+        #saver = tf.train.import_meta_graph('crack_capcha.model-1800.meta')
 
-        predict = tf.argmax(tf.reshape(
-            output, [-1, MAX_CAPTCHA, CHAR_SET_LEN]), 2)
-        text_list = sess.run(predict, feed_dict={X: [image], keep_prob: 1})
-        predict_text = text_list[0].tolist()
+        saver = tf.train.Saver()  # 创建saver对象
+        #saver.restore(sess,"crack_capcha.model")
+        saver.restore(sess, tf.train.latest_checkpoint('.'))
 
-        vector = np.zeros(MAX_CAPTCHA * CHAR_SET_LEN)
-        i = 0
-        for t in predict_text:
-            vector[i * 63 + t] = 1
-            i += 1
-            # break
+        ok = 0
+        need_verify=os.listdir("verify_pic_set") 
 
-        print("正确: {}  预测: {}".format(text, vec2text(vector)))
-        if text == vec2text(vector):
-            ok += 1
-    #print("正确率:%f", ok/index)
-    """
+        for pic in need_verify:
+            pic_name=os.path.join("verify_pic_set",pic)
+            text, image = get_single_image_and_text(pic_name)
+            image = convert2gray(image)
+            image = image.flatten() / 255
+
+            predict = tf.argmax(tf.reshape(
+                output, [-1, MAX_CAPTCHA, CHAR_SET_LEN]), 2)
+            text_list = sess.run(predict, feed_dict={X: [image], keep_prob: 1})
+            predict_text = text_list[0].tolist()
+            print(text_list)
+            print(predict)
+            vector = np.zeros(MAX_CAPTCHA * CHAR_SET_LEN)
+            i = 0
+            try:
+                for t in predict_text:
+                    vector[i * CHAR_SET_LEN + t] = 1
+                    i += 1
+                    # break
+                print("正确: {}  预测: {}".format(text, vec2text(vector)))
+                if text == vec2text(vector):
+                    ok += 1
+            except:
+                traceback.print_exc()
+                print("predict_text",predict_text)                
+            
+        print("正确率:%f", ok/len(need_verify))
+        
